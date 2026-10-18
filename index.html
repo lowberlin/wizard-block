@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#3a3eb4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Wizard">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Wizard-Block</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one narrow column for the table, used on a phone between rounds.
+   Standings on top, the input panel for the current round, the score block below. */
+:root{
+  --bg:#eceef5; --surface:#ffffff; --ink:#1b1f3a; --muted:#5b6185; --line:#d5d8e6;
+  --accent:#3a3eb4; --accent-ink:#ffffff; --accent-soft:#e1e2fa; --gold:#a8760a;
+  --good:#1b7f52; --bad:#b8382b; --good-soft:#dff2e8; --bad-soft:#f8e1de;
+  --s-blau:#2563c9; --s-gruen:#23894a; --s-rot:#c3352b; --s-gelb:#c08a00;
+  --f-display:"Cinzel","Trajan Pro",Georgia,serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11132a; --surface:#1a1d3a; --ink:#e8e9f6; --muted:#9ca0c6; --line:#2e3259;
+  --accent:#8e92ff; --accent-ink:#11132a; --accent-soft:#272b5e; --gold:#e2b443;
+  --good:#52c58e; --bad:#ff7466; --good-soft:#18352b; --bad-soft:#3d1f22;
+  --s-blau:#6ea2ff; --s-gruen:#4fc47e; --s-rot:#ff6e62; --s-gelb:#f0c140; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11132a; --surface:#1a1d3a; --ink:#e8e9f6; --muted:#9ca0c6; --line:#2e3259;
+  --accent:#8e92ff; --accent-ink:#11132a; --accent-soft:#272b5e; --gold:#e2b443;
+  --good:#52c58e; --bad:#ff7466; --good-soft:#18352b; --bad-soft:#3d1f22;
+  --s-blau:#6ea2ff; --s-gruen:#4fc47e; --s-rot:#ff6e62; --s-gelb:#f0c140; color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
+#app{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{margin:0;text-wrap:balance}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+.brand{font-family:var(--f-display);font-weight:700;font-size:30px;letter-spacing:.04em;display:flex;align-items:center;gap:10px}
+.brand .z{display:inline-grid;place-items:center;width:34px;height:46px;border-radius:5px;background:var(--accent);color:var(--accent-ink);font-size:22px;box-shadow:inset 0 0 0 3px var(--accent),inset 0 0 0 4px var(--accent-ink)}
+.lede{margin:6px 0 0;color:var(--muted);max-width:60ch}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px}
+.panel h2{font-family:var(--f-display);font-size:19px;letter-spacing:.03em}
+.panel h3{font-size:15px}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:700}
+.btn:hover{border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed;border-color:var(--line)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);padding:12px 18px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted);padding:6px 8px}
+.btn.ghost:hover{color:var(--ink)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.small{padding:5px 10px;font-size:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.spacer{flex:1}
+
+/* setup */
+.names{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;counter-reset:p}
+.names li{display:flex;gap:8px;align-items:center;counter-increment:p}
+.names li::before{content:counter(p);font-family:var(--f-num);color:var(--muted);width:1.4em;text-align:right}
+.names input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field select,.field input{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.check{display:flex;gap:10px;align-items:flex-start}
+.check input{width:20px;height:20px;margin-top:2px;accent-color:var(--accent);flex:none}
+.check small{display:block;color:var(--muted)}
+.facts{display:flex;gap:18px;flex-wrap:wrap;padding:12px 14px;background:var(--accent-soft);border-radius:8px}
+.facts div{display:flex;flex-direction:column}
+.facts b{font-family:var(--f-num);font-size:22px}
+.group{display:flex;flex-direction:column;gap:12px;padding-top:14px;border-top:1px solid var(--line)}
+.pts3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:end}
+.pts3 input{width:100%;font-family:var(--f-num)}
+.pts3 .field span:first-child{min-height:2.6em}
+@media (max-width:420px){.pts3{grid-template-columns:1fr}.pts3 .field span:first-child{min-height:0}}
+.example{font-size:14px;color:var(--muted);margin:0}
+.example b{font-family:var(--f-num);color:var(--ink)}
+
+/* rules reference */
+details.rules{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px}
+details.rules summary{cursor:pointer;font-weight:700;font-family:var(--f-display);letter-spacing:.03em}
+details.rules h4{margin:14px 0 4px;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+details.rules ul{margin:0;padding-left:20px;max-width:65ch}
+details.rules li{margin:3px 0}
+.activerules{display:flex;gap:6px;flex-wrap:wrap}
+.activerules span{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+
+/* standings */
+.standings{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.chip{flex:1 0 auto;min-width:96px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.chip.lead{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.chip .who{font-weight:700;display:flex;gap:6px;align-items:center;white-space:nowrap}
+.chip .pts{font-family:var(--f-num);font-size:22px;font-weight:600}
+.crown{color:var(--gold);font-size:13px}
+
+/* round header */
+.roundhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.roundhead .big{font-family:var(--f-display);font-size:26px;font-weight:700}
+.roundhead .of{color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--accent-soft);font-size:13px;font-weight:700}
+.progress{height:4px;background:var(--line);border-radius:4px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent)}
+
+/* trump */
+.trump{display:flex;flex-direction:column;gap:8px}
+.suits{display:flex;gap:6px;flex-wrap:wrap}
+.suit{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-weight:700;font-size:14px}
+.suit i{width:12px;height:12px;border-radius:50%;background:var(--c,transparent);border:1px solid var(--c,var(--muted))}
+.suit[aria-pressed="true"]{border-color:var(--c,var(--ink));box-shadow:inset 0 0 0 1px var(--c,var(--ink));background:var(--surface)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c,transparent);border:1px solid var(--c,var(--muted));vertical-align:middle}
+
+/* player rows */
+.plist{display:flex;flex-direction:column}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.prow:first-child{border-top:0}
+.prow.edit{grid-template-columns:minmax(0,1fr) auto auto}
+.pname{font-weight:700;overflow-wrap:anywhere}
+.pname .tag{font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-left:6px}
+.pname .sub{display:block;font-weight:400;font-size:13px;color:var(--muted)}
+.stepper{display:flex;align-items:center;gap:4px}
+.stepper button{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:var(--bg);font-size:22px;line-height:1;font-weight:700}
+.stepper button:disabled{opacity:.35;cursor:not-allowed}
+.stepper output{min-width:2.2ch;text-align:center;font-family:var(--f-num);font-size:24px;font-weight:600}
+.stepper.blocked output{color:var(--bad)}
+.stepper.hidden output{color:var(--muted)}
+.steplabel{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center;font-weight:700}
+.delta{font-family:var(--f-num);font-weight:600;font-size:14px;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.delta.good{color:var(--good);background:var(--good-soft)}
+.delta.bad{color:var(--bad);background:var(--bad-soft)}
+
+.status{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-radius:8px;background:var(--bg);font-size:15px}
+.status.warn{background:var(--bad-soft);color:var(--bad)}
+.status.ok{background:var(--good-soft);color:var(--good)}
+.status b{font-family:var(--f-num)}
+.status select{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);max-width:100%}
+
+/* final */
+.podium{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.podium li{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:8px}
+.podium li.first{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.podium .place{font-family:var(--f-display);font-weight:700;font-size:20px;width:2ch;color:var(--muted)}
+.podium li.first .place{color:var(--gold)}
+.podium .n{flex:1;font-weight:700;min-width:0;overflow-wrap:anywhere}
+.podium .p{font-family:var(--f-num);font-size:20px;font-weight:600}
+
+/* score block */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{font-weight:700;font-size:14px;position:sticky;top:0;background:var(--surface)}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.editing td{background:var(--accent-soft)}
+.cell-total{font-family:var(--f-num);font-weight:600;font-size:16px;display:block}
+.cell-sub{font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.cell-sub .good{color:var(--good)}
+.cell-sub .bad{color:var(--bad)}
+.rbtn{border:0;background:transparent;padding:0;display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left}
+.rbtn .rn{font-family:var(--f-num);font-weight:600;display:flex;align-items:center;gap:5px}
+.rbtn .ed{font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.04em}
+.empty{padding:22px;text-align:center;color:var(--muted)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+
+@media (max-width:420px){
+  .stepper button{width:40px;height:40px}
+  .prow.edit{grid-template-columns:minmax(0,1fr) auto}
+  .prow.edit .pname{grid-column:1 / -1}
+}
+@media (prefers-reduced-motion:no-preference){
+  .progress i{transition:width .3s ease}
+}
+</style>
+
+</head>
+<body>
+<div id="app"><div class="panel" style="margin-top:24px">
+<h2>Wizard-Block</h2>
+<p>Diese Vorschau startet die App nicht, weil sie kein JavaScript ausführt. Das passiert oft in der Dateivorschau von WhatsApp, Mail oder der Dateien-App.</p>
+<p><b>So klappt es:</b> Datei speichern und mit einem richtigen Browser öffnen, also Chrome, Safari, Firefox oder Edge. Am Computer reicht ein Rechtsklick → „Öffnen mit“ → Browser.</p>
+</div></div>
+
+<script>
+(() => {
+const KEY = 'wizard-block-v1';
+const DECK = 60;
+const SUITS = [
+  {v:'blau',  name:'Blau',  c:'var(--s-blau)'},
+  {v:'gruen', name:'Grün',  c:'var(--s-gruen)'},
+  {v:'rot',   name:'Rot',   c:'var(--s-rot)'},
+  {v:'gelb',  name:'Gelb',  c:'var(--s-gelb)'},
+  {v:'kein',  name:'Kein Trumpf', c:''}
+];
+const DEFAULT_RULES = {base:20, per:10, minus:10, noEven:false, hidden:false, firstBlind:false,
+                       roundsMode:'full', roundsCustom:10, trump:true, bomb:false, cloud:false, eye:false};
+let confirmNew = false;
+
+function fresh(){
+  return {screen:'setup', names:['Anna','Ben','Clara','David'], startDealer:0, rules:{...DEFAULT_RULES},
+          players:[], rounds:[], cur:null, editIdx:null, edit:null};
+}
+function migrate(s){
+  if (!s || !s.screen) return null;
+  if (!s.rules) s.rules = {...DEFAULT_RULES, noEven:!!s.noEven};
+  s.rules = {...DEFAULT_RULES, ...s.rules};
+  return s;
+}
+function load(){ try { return migrate(JSON.parse(localStorage.getItem(KEY))); } catch(e){ return null; } }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+let S = load() || fresh();
+const R = () => S.rules;
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const n = () => S.players.length;
+const maxRounds = cnt => Math.floor(DECK / cnt);
+const roundsFor = cnt => R().roundsMode === 'full' ? maxRounds(cnt) : Math.max(1, Math.min(maxRounds(cnt), R().roundsCustom | 0));
+const totalRounds = () => roundsFor(n());
+const dealerOf = r => (S.startDealer + r - 1) % n();          // r is 1-based
+const lastCardRound = r => r * n() === DECK;                   // no card left to turn up
+const sum = a => a.reduce((x, y) => x + y, 0);
+const fmt = v => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v);
+const order = r => { const d = dealerOf(r); return Array.from({length:n()}, (_, k) => (d + 1 + k) % n()); };
+const suit = v => SUITS.find(s => s.v === v);
+
+function effBid(rd, p){ return rd.bids[p] + (rd.cloud && rd.cloud.p === p ? rd.cloud.d : 0); }
+function scoreRaw(b, t){ return b === t ? R().base + R().per * t : -R().minus * Math.abs(b - t); }
+function score(rd, p){ return scoreRaw(effBid(rd, p), rd.tricks[p]); }
+/* tricks must add up to the card count; with the bomb one trick may go to nobody */
+function tricksOk(r, s){ return s === r || (R().bomb && s === r - 1); }
+
+function totals(upto = S.rounds.length){
+  const t = S.players.map(() => 0);
+  for (let i = 0; i < upto; i++) S.players.forEach((_, p) => t[p] += score(S.rounds[i], p));
+  return t;
+}
+function newCur(){
+  const r = S.rounds.length + 1;
+  return {phase:'bid', bids:S.players.map(() => 0), tricks:S.players.map(() => 0),
+          trump: n() && lastCardRound(r) ? 'kein' : null, cloud:null};
+}
+
+/* Dealer may not make the bids add up to the card count (variant rule). */
+function forbiddenBid(r, bids){
+  if (!R().noEven) return null;
+  const d = dealerOf(r);
+  const v = r - (sum(bids) - bids[d]);
+  return v >= 0 && v <= r ? v : null;
+}
+
+function stepper(kind, p, val, max, cls){
+  return `<div class="stepper ${cls || ''}">
+    <button data-act="dec" data-kind="${kind}" data-p="${p}" aria-label="weniger" ${val <= 0 ? 'disabled' : ''}>−</button>
+    <output class="num" aria-live="polite">${val}</output>
+    <button data-act="inc" data-kind="${kind}" data-p="${p}" aria-label="mehr" ${val >= max ? 'disabled' : ''}>+</button>
+  </div>`;
+}
+
+function rulesSummary(){
+  const r = R(), out = [];
+  out.push(`${r.base} + ${r.per}/Stich, −${r.minus}/Fehlstich`);
+  if (r.roundsMode !== 'full') out.push(`${totalRounds()} Runden`);
+  if (r.noEven) out.push('Ansagen dürfen nicht aufgehen');
+  if (r.hidden) out.push('Verdeckte Ansage');
+  if (r.firstBlind) out.push('Runde 1 an der Stirn');
+  if (r.bomb) out.push('Bombe');
+  if (r.cloud) out.push('Wolke');
+  if (r.eye) out.push('Auge');
+  return `<div class="activerules" aria-label="Aktive Regeln">${out.map(x => `<span>${x}</span>`).join('')}</div>`;
+}
+
+function rulesReference(){
+  const r = R();
+  return `<details class="rules">
+    <summary>Spielregeln zum Nachlesen</summary>
+    <h4>Ablauf</h4>
+    <ul>
+      <li>60 Karten: je 13 Zahlenkarten (1–13) in Blau, Grün, Rot und Gelb, dazu 4 Zauberer (Z) und 4 Narren (N).</li>
+      <li>In Runde <i>n</i> bekommt jeder <i>n</i> Karten. Bei 3 Spielern sind es 20 Runden, bei 4 Spielern 15, bei 5 Spielern 12 und bei 6 Spielern 10.</li>
+      <li>Der Geber wechselt jede Runde im Uhrzeigersinn. Die Person links vom Geber sagt zuerst an und spielt den ersten Stich aus.</li>
+    </ul>
+    <h4>Trumpf</h4>
+    <ul>
+      <li>Nach dem Geben wird die oberste Karte des Reststapels aufgedeckt. Ihre Farbe ist Trumpf.</li>
+      <li>Liegt dort ein Zauberer, bestimmt der Geber die Trumpffarbe, nachdem er seine Karten angesehen hat.</li>
+      <li>Liegt dort ein Narr, gibt es in dieser Runde keinen Trumpf.</li>
+      <li>In der letzten Runde sind alle Karten verteilt. Es gibt keinen Trumpf.</li>
+    </ul>
+    <h4>Stiche</h4>
+    <ul>
+      <li>Die ausgespielte Farbe muss bedient werden. Zauberer und Narren dürfen immer gespielt werden.</li>
+      <li>Wird ein Zauberer zuerst gespielt, dürfen alle anderen beliebige Karten legen. Der erste Zauberer im Stich gewinnt immer.</li>
+      <li>Wird ein Narr zuerst gespielt, bestimmt die erste Zahlenkarte die zu bedienende Farbe.</li>
+      <li>Ohne Zauberer gewinnt der höchste Trumpf, sonst die höchste Karte der ausgespielten Farbe.</li>
+      <li>Besteht ein Stich nur aus Narren, gewinnt der erste Narr.</li>
+      <li>Wer den Stich gewinnt, spielt den nächsten aus.</li>
+    </ul>
+    <h4>Punkte${r.base !== 20 || r.per !== 10 || r.minus !== 10 ? ' (eure Hausregel)' : ''}</h4>
+    <ul>
+      <li>Ansage getroffen: ${r.base} Punkte plus ${r.per} pro Stich. Wer 0 ansagt und keinen Stich macht, bekommt ${r.base}.</li>
+      <li>Ansage verfehlt: −${r.minus} Punkte pro Stich Abweichung, egal ob zu viele oder zu wenige.</li>
+      <li>Wer am Ende die meisten Punkte hat, gewinnt.</li>
+    </ul>
+    <h4>Varianten</h4>
+    <ul>
+      <li><b>Ansagen dürfen nicht aufgehen:</b> Die Summe aller Ansagen darf nicht der Kartenzahl entsprechen. Der Geber sagt zuletzt an und muss ausweichen, damit mindestens einer danebenliegt.</li>
+      <li><b>Verdeckte Ansage:</b> Alle notieren ihre Ansage geheim. Aufgedeckt wird erst nach der Runde.</li>
+      <li><b>Runde 1 an der Stirn:</b> In der ersten Runde hält jeder seine Karte an die Stirn, ohne sie selbst anzusehen. Man sieht nur die Karten der anderen.</li>
+      <li><b>Bombe</b> (Sonderkarte): Der Stich mit der Bombe gehört niemandem. In dieser Runde werden also ein Stich weniger verteilt.</li>
+      <li><b>Wolke</b> (Sonderkarte): Wer den Stich mit der Wolke gewinnt, muss seine Ansage nachträglich um 1 erhöhen oder senken.</li>
+      <li><b>Auge</b> (Sonderkarte): Wer das Auge auf der Hand hat, kann es in einer Runde legen. Dann schaut man sich drei Karten vom Stapel an, nimmt eine davon und muss sie sofort legen. In der letzten Runde liegt kein Stapel mehr, dann ist das Auge für diese Runde aus dem Spiel. Auf die Punktewertung wirkt sich das Auge nicht aus.</li>
+    </ul>
+  </details>`;
+}
+
+/* ---------- setup ---------- */
+function setupView(){
+  const cnt = S.names.length, rounds = roundsFor(cnt), r = R();
+  const ex = (b, t) => `<b>${fmt(scoreRaw(b, t))}</b>`;
+  return `
+  <header>
+    <h1 class="brand"><span class="z" aria-hidden="true">Z</span>Wizard-Block</h1>
+    <p class="lede">Ansagen und Stiche eintippen, der Block rechnet die Punkte. Für 3 bis 6 Spieler mit dem normalen 60-Karten-Deck.</p>
+  </header>
+  <section class="panel">
+    <h2>Spieler</h2>
+    <ol class="names">
+      ${S.names.map((nm, i) => `<li>
+        <input id="name-${i}" data-i="${i}" value="${esc(nm)}" placeholder="Spieler ${i + 1}" maxlength="18" autocomplete="off">
+        <button class="btn ghost" data-act="rm" data-i="${i}" aria-label="Spieler entfernen" ${cnt <= 3 ? 'disabled' : ''}>Entfernen</button>
+      </li>`).join('')}
+    </ol>
+    <div class="row"><button class="btn" data-act="add" ${cnt >= 6 ? 'disabled' : ''}>+ Spieler hinzufügen</button></div>
+    <label class="field"><span class="label">Erster Geber</span>
+      <select id="dealer">${S.names.map((nm, i) => `<option value="${i}" ${i === S.startDealer ? 'selected' : ''}>${esc(nm || 'Spieler ' + (i + 1))}</option>`).join('')}</select>
+    </label>
+  </section>
+
+  <section class="panel">
+    <div class="row"><h2>Regeln</h2><span class="spacer"></span><button class="btn small" data-act="resetrules">Originalregeln</button></div>
+
+    <div class="group" style="border-top:0;padding-top:0">
+      <h3>Spiellänge</h3>
+      <label class="field"><span class="label">Rundenzahl</span>
+        <select id="rmode">
+          <option value="full" ${r.roundsMode === 'full' ? 'selected' : ''}>Volles Spiel: ${maxRounds(cnt)} Runden (alle Karten)</option>
+          <option value="custom" ${r.roundsMode === 'custom' ? 'selected' : ''}>Kürzeres Spiel</option>
+        </select>
+      </label>
+      ${r.roundsMode === 'custom' ? `<label class="field"><span class="label">Runden (1–${maxRounds(cnt)})</span>
+        <input id="rcustom" type="number" inputmode="numeric" min="1" max="${maxRounds(cnt)}" value="${Math.min(r.roundsCustom, maxRounds(cnt))}"></label>` : ''}
+    </div>
+
+    <div class="group">
+      <h3>Punkte</h3>
+      <div class="pts3">
+        <label class="field"><span class="label">Ansage getroffen</span><input id="pt-base" type="number" inputmode="numeric" min="0" value="${r.base}"></label>
+        <label class="field"><span class="label">plus pro Stich</span><input id="pt-per" type="number" inputmode="numeric" min="0" value="${r.per}"></label>
+        <label class="field"><span class="label">minus pro Fehlstich</span><input id="pt-minus" type="number" inputmode="numeric" min="0" value="${r.minus}"></label>
+      </div>
+      <p class="example" id="ptex">Beispiel: 2 angesagt, 2 gemacht ${ex(2,2)} · 0 angesagt, 0 gemacht ${ex(0,0)} · 3 angesagt, 1 gemacht ${ex(3,1)}</p>
+    </div>
+
+    <div class="group">
+      <h3>Ansagen</h3>
+      <label class="check"><input type="checkbox" id="r-noEven" ${r.noEven ? 'checked' : ''}>
+        <span>Ansagen dürfen nicht aufgehen
+          <small>Die Summe der Ansagen darf nicht gleich der Kartenzahl sein. Die App sagt dem Geber, welche Zahl verboten ist.</small></span></label>
+      <label class="check"><input type="checkbox" id="r-hidden" ${r.hidden ? 'checked' : ''}>
+        <span>Verdeckte Ansage
+          <small>Ansagen werden geheim notiert. Die App zeigt während der Eingabe keine Summe an. Nicht mit „dürfen nicht aufgehen“ kombinierbar.</small></span></label>
+      <label class="check"><input type="checkbox" id="r-firstBlind" ${r.firstBlind ? 'checked' : ''}>
+        <span>Runde 1 an der Stirn
+          <small>In der ersten Runde hält jeder seine Karte an die Stirn. Die App erinnert daran.</small></span></label>
+    </div>
+
+    <div class="group">
+      <h3>Trumpf</h3>
+      <label class="check"><input type="checkbox" id="r-trump" ${r.trump ? 'checked' : ''}>
+        <span>Trumpf jeder Runde mitschreiben
+          <small>Mit Hinweisen zu Zauberer und Narr als Trumpfkarte. In der letzten Runde gibt es automatisch keinen Trumpf.</small></span></label>
+    </div>
+
+    <div class="group">
+      <h3>Sonderkarten</h3>
+      <label class="check"><input type="checkbox" id="r-bomb" ${r.bomb ? 'checked' : ''}>
+        <span>Bombe
+          <small>Der Stich mit der Bombe gehört niemandem. Die App akzeptiert dann einen Stich weniger als Karten.</small></span></label>
+      <label class="check"><input type="checkbox" id="r-cloud" ${r.cloud ? 'checked' : ''}>
+        <span>Wolke
+          <small>Wer den Wolken-Stich gewinnt, ändert seine Ansage um +1 oder −1. Gewertet wird die geänderte Ansage.</small></span></label>
+      <label class="check"><input type="checkbox" id="r-eye" ${r.eye ? 'checked' : ''}>
+        <span>Auge
+          <small>Wer das Auge legt, schaut sich drei Karten vom Stapel an, nimmt eine und legt sie sofort. In der letzten Runde ist das Auge aus dem Spiel. Die App zeigt die Regel während der Stiche als Erinnerung an.</small></span></label>
+    </div>
+
+    <div class="facts">
+      <div><span class="label">Spieler</span><b>${cnt}</b></div>
+      <div><span class="label">Runden</span><b>${rounds}</b></div>
+      <div><span class="label">Karten in Runde 1</span><b>1</b></div>
+      <div><span class="label">Letzte Runde</span><b>${rounds}</b></div>
+    </div>
+    <button class="btn primary" data-act="start">Spiel starten</button>
+  </section>
+  ${rulesReference()}`;
+}
+
+/* ---------- game ---------- */
+function standingsView(){
+  const t = totals(), best = Math.max(...t);
+  const idx = S.players.map((_, i) => i).sort((a, b) => t[b] - t[a]);
+  return `<div class="standings" aria-label="Zwischenstand">${idx.map(i => `
+    <div class="chip${S.rounds.length && t[i] === best ? ' lead' : ''}">
+      <span class="who">${S.rounds.length && t[i] === best ? '<span class="crown" aria-label="führt">♛</span>' : ''}${esc(S.players[i])}</span>
+      <span class="pts">${t[i]}</span>
+    </div>`).join('')}</div>`;
+}
+
+function trumpView(r, target){
+  if (!R().trump) return '';
+  const cur = target.trump;
+  if (lastCardRound(r)) return `<div class="trump"><span class="label">Trumpf</span><span class="hint">Letzte Runde: Alle Karten sind verteilt, es gibt keinen Trumpf.</span></div>`;
+  return `<div class="trump">
+    <span class="label">Trumpf</span>
+    <div class="suits" role="group" aria-label="Trumpffarbe">${SUITS.map(s => `
+      <button class="suit" data-act="trump" data-v="${s.v}" aria-pressed="${cur === s.v}" style="${s.c ? `--c:${s.c}` : ''}"><i></i>${s.name}</button>`).join('')}
+    </div>
+    <span class="hint">Zauberer aufgedeckt: ${esc(S.players[dealerOf(r)])} wählt als Geber die Farbe. Narr aufgedeckt: kein Trumpf.</span>
+  </div>`;
+}
+
+function bidPanel(r){
+  const c = S.cur, d = dealerOf(r), ord = order(r), rules = R();
+  const s = sum(c.bids), forb = forbiddenBid(r, c.bids), clash = rules.noEven && s === r;
+  let st;
+  if (rules.hidden) st = `<div class="status">Verdeckte Ansage: Erst eintragen, wenn alle ihre Zahl notiert haben. Die Summe bleibt bis nach der Runde verborgen.</div>`;
+  else if (clash) st = `<div class="status warn">Ansagen gehen auf (<b>${s}</b> von <b>${r}</b>). ${esc(S.players[d])} als Geber darf nicht <b>${c.bids[d]}</b> sagen.</div>`;
+  else if (s === r) st = `<div class="status">Angesagt: <b>${s}</b> von <b>${r}</b> Stichen. Geht genau auf.</div>`;
+  else st = `<div class="status">Angesagt: <b>${s}</b> von <b>${r}</b> Stichen. ${s < r ? `${r - s} Stich${r - s > 1 ? 'e' : ''} zu wenig angesagt.` : `${s - r} Stich${s - r > 1 ? 'e' : ''} zu viel angesagt.`}</div>`;
+  const blind = rules.firstBlind && r === 1 ? `<div class="status">Runde 1 an der Stirn: Karte nicht ansehen, sondern an die Stirn halten. Angesagt wird nach den Karten der anderen.</div>` : '';
+  return `
+    ${trumpView(r, c)}
+    <div class="row"><h2>Ansagen</h2><span class="spacer"></span><span class="hint">in Ansagereihenfolge</span></div>
+    ${blind}
+    <div class="plist">${ord.map((p, k) => `
+      <div class="prow">
+        <span class="pname">${esc(S.players[p])}${p === d ? '<span class="tag">Geber</span>' : ''}${k === 0 ? '<span class="tag">beginnt</span>' : ''}
+          ${p === d && forb !== null && !rules.hidden ? `<span class="sub">darf nicht ${forb} sagen</span>` : ''}</span>
+        ${stepper('bids', p, c.bids[p], r, clash && p === d ? 'blocked' : '')}
+      </div>`).join('')}</div>
+    ${st}
+    <button class="btn primary" data-act="tobids" ${clash ? 'disabled' : ''}>Ansagen fertig, Stiche eintragen</button>`;
+}
+
+function cloudView(scope, target, r){
+  if (!R().cloud) return '';
+  const cl = target.cloud;
+  return `<div class="status">Wolke gewonnen von
+    <select data-cloud="${scope}" data-f="p" aria-label="Wolke gewonnen von">
+      <option value="">niemand / nicht im Spiel</option>
+      ${S.players.map((nm, p) => `<option value="${p}" ${cl && cl.p === p ? 'selected' : ''}>${esc(nm)}</option>`).join('')}
+    </select>
+    ${cl ? `<select data-cloud="${scope}" data-f="d" aria-label="Ansage ändern">
+      <option value="1" ${cl.d === 1 ? 'selected' : ''}>Ansage +1 (${target.bids[cl.p] + 1})</option>
+      <option value="-1" ${cl.d === -1 ? 'selected' : ''} ${target.bids[cl.p] === 0 ? 'disabled' : ''}>Ansage −1 (${Math.max(0, target.bids[cl.p] - 1)})</option>
+    </select>` : ''}
+  </div>`;
+}
+
+function trickStatus(r, s){
+  const ok = tricksOk(r, s);
+  const bomb = R().bomb && s === r - 1 ? ' · ein Stich ging an die Bombe' : '';
+  return `<div class="status ${ok ? 'ok' : s > r ? 'warn' : ''}">Stiche verteilt: <b>${s}</b> von <b>${r}</b>${ok ? bomb : s < r ? ` · noch ${r - s} offen${R().bomb ? ` (mit Bombe ${r - 1 - s > 0 ? r - 1 - s : 0})` : ''}` : ` · ${s - r} zu viel`}</div>`;
+}
+
+function trickPanel(r){
+  const c = S.cur, ord = order(r), s = sum(c.tricks), ok = tricksOk(r, s);
+  return `
+    ${trumpView(r, c)}
+    <div class="row"><h2>Stiche</h2><span class="spacer"></span><button class="btn ghost" data-act="backbid">← Ansagen ändern</button></div>
+    <div class="plist">${ord.map(p => { const v = score(c, p), eb = effBid(c, p); return `
+      <div class="prow">
+        <span class="pname">${esc(S.players[p])}<span class="sub">Ansage ${eb !== c.bids[p] ? `<s>${c.bids[p]}</s> ${eb} (Wolke)` : c.bids[p]} · <span class="delta ${v >= 0 ? 'good' : 'bad'}">${fmt(v)}</span></span></span>
+        ${stepper('tricks', p, c.tricks[p], r)}
+      </div>`; }).join('')}</div>
+    ${R().eye ? `<div class="status">${lastCardRound(r) ? 'Auge: Letzte Runde, kein Stapel mehr. Das Auge ist in dieser Runde aus dem Spiel.' : 'Auge: Wer das Auge legt, schaut sich drei Karten vom Stapel an, nimmt eine davon und legt sie sofort.'}</div>` : ''}
+    ${cloudView('cur', c, r)}
+    ${trickStatus(r, s)}
+    <button class="btn primary" data-act="commit" ${ok ? '' : 'disabled'}>Runde ${r} werten</button>`;
+}
+
+function editPanel(){
+  const k = S.editIdx, r = k + 1, e = S.edit, ord = order(r), s = sum(e.tricks), ok = tricksOk(r, s);
+  return `
+    <div class="row"><h2>Runde ${r} korrigieren</h2><span class="spacer"></span><span class="hint">Geber: ${esc(S.players[dealerOf(r)])}</span></div>
+    ${trumpView(r, e)}
+    <div class="plist">${ord.map(p => { const v = score(e, p); return `
+      <div class="prow edit">
+        <span class="pname">${esc(S.players[p])} <span class="delta ${v >= 0 ? 'good' : 'bad'}">${fmt(v)}</span></span>
+        <div><div class="steplabel">Ansage</div>${stepper('ebids', p, e.bids[p], r)}</div>
+        <div><div class="steplabel">Stiche</div>${stepper('etricks', p, e.tricks[p], r)}</div>
+      </div>`; }).join('')}</div>
+    ${cloudView('edit', e, r)}
+    ${trickStatus(r, s)}
+    <div class="row">
+      <button class="btn primary" data-act="saveedit" ${ok ? '' : 'disabled'}>Änderung speichern</button>
+      <button class="btn" data-act="canceledit">Abbrechen</button>
+    </div>`;
+}
+
+function finalPanel(){
+  const t = totals(), idx = S.players.map((_, i) => i).sort((a, b) => t[b] - t[a]);
+  let place = 0, prev = null;
+  return `
+    <h2>Spielende nach ${S.rounds.length} Runden</h2>
+    <ol class="podium">${idx.map((p, k) => { if (t[p] !== prev) place = k + 1; prev = t[p]; return `
+      <li class="${place === 1 ? 'first' : ''}"><span class="place">${place}</span><span class="n">${esc(S.players[p])}</span><span class="p">${t[p]}</span></li>`; }).join('')}
+    </ol>
+    <div class="row">
+      <button class="btn primary" data-act="rematch">Revanche mit gleichen Regeln</button>
+      <button class="btn" data-act="tosetup">Spieler oder Regeln ändern</button>
+    </div>`;
+}
+
+function tableView(){
+  const editing = S.editIdx;
+  const run = S.players.map(() => 0);
+  const rows = S.rounds.map((rd, i) => {
+    const r = i + 1, ts = R().trump && rd.trump ? suit(rd.trump) : null;
+    return `<tr class="${editing === i ? 'editing' : ''}">
+      <td><button class="rbtn" data-act="edit" data-i="${i}" aria-label="Runde ${r} korrigieren"><span class="rn">${r}${ts ? ` <span class="dot" title="Trumpf: ${ts.name}" style="${ts.c ? `--c:${ts.c}` : ''}"></span>` : ''}</span><span class="ed">ändern</span></button></td>
+      ${S.players.map((_, p) => { const v = score(rd, p); run[p] += v; const eb = effBid(rd, p); return `
+        <td><span class="cell-total">${run[p]}</span>
+        <span class="cell-sub">${eb !== rd.bids[p] ? `${rd.bids[p]}→${eb}` : rd.bids[p]}/${rd.tricks[p]} <span class="${v >= 0 ? 'good' : 'bad'}">${fmt(v)}</span></span></td>`; }).join('')}
+    </tr>`;
+  }).join('');
+  return `
+  <section>
+    <div class="row" style="margin-bottom:8px"><h3 class="label">Spielblock</h3><span class="spacer"></span><span class="hint">Zelle: Stand · Ansage/Stiche · Rundenpunkte</span></div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Rd.</th>${S.players.map(p => `<th>${esc(p)}</th>`).join('')}</tr></thead>
+      <tbody>${rows || `<tr><td colspan="${n() + 1}" class="empty">Noch keine Runde gewertet. Nach jeder Runde erscheint hier eine Zeile, die du antippen und korrigieren kannst.</td></tr>`}</tbody>
+    </table></div>
+  </section>`;
+}
+
+function gameView(){
+  const done = S.rounds.length >= totalRounds();
+  const r = S.rounds.length + 1, T = totalRounds();
+  let head = '';
+  if (!done && S.editIdx === null) head = `
+    <div class="roundhead">
+      <span class="big">Runde ${r}</span><span class="of num">von ${T}</span>
+      <span class="spacer"></span>
+      <span class="pill">${r} ${r === 1 ? 'Karte' : 'Karten'}</span>
+      <span class="pill">Geber: ${esc(S.players[dealerOf(r)])}</span>
+    </div>
+    <div class="progress" aria-hidden="true"><i style="width:${(S.rounds.length / T) * 100}%"></i></div>`;
+  let body;
+  if (S.editIdx !== null) body = editPanel();
+  else if (done) body = finalPanel();
+  else body = S.cur.phase === 'bid' ? bidPanel(r) : trickPanel(r);
+  return `
+  <header class="row">
+    <h1 class="brand" style="font-size:22px"><span class="z" aria-hidden="true" style="width:26px;height:36px;font-size:17px">Z</span>Wizard-Block</h1>
+    <span class="spacer"></span>
+    <button class="btn ghost" data-act="undo" ${S.rounds.length && S.editIdx === null ? '' : 'disabled'}>↶ Letzte Runde zurück</button>
+    ${confirmNew
+      ? `<button class="btn danger" data-act="newyes">Spiel verwerfen</button><button class="btn" data-act="newno">Weiterspielen</button>`
+      : `<button class="btn" data-act="newgame">Neues Spiel</button>`}
+  </header>
+  ${rulesSummary()}
+  ${standingsView()}
+  <section class="panel">${head}${body}</section>
+  ${tableView()}
+  ${rulesReference()}`;
+}
+
+function render(){
+  const open = document.querySelector('details.rules')?.open;
+  document.getElementById('app').innerHTML = S.screen === 'setup' ? setupView() : gameView();
+  if (open) { const d = document.querySelector('details.rules'); if (d) d.open = true; }
+  save();
+}
+
+/* ---------- actions ---------- */
+function wake(){ try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch(e){} }
+function updateExample(){
+  const el = document.getElementById('ptex'); if (!el) return;
+  const ex = (b, t) => `<b>${fmt(scoreRaw(b, t))}</b>`;
+  el.innerHTML = `Beispiel: 2 angesagt, 2 gemacht ${ex(2,2)} · 0 angesagt, 0 gemacht ${ex(0,0)} · 3 angesagt, 1 gemacht ${ex(3,1)}`;
+}
+
+const app = document.getElementById('app');
+app.addEventListener('input', e => {
+  const el = e.target;
+  if (el.matches('.names input')) {
+    const i = +el.dataset.i; S.names[i] = el.value;
+    const opt = document.querySelector(`#dealer option[value="${i}"]`);
+    if (opt) opt.textContent = el.value || 'Spieler ' + (i + 1);
+    save();
+  }
+  const pt = {'pt-base':'base', 'pt-per':'per', 'pt-minus':'minus'}[el.id];
+  if (pt) { const v = parseInt(el.value, 10); S.rules[pt] = isNaN(v) ? 0 : Math.abs(v); updateExample(); save(); }
+});
+app.addEventListener('change', e => {
+  const el = e.target;
+  if (el.id === 'dealer') { S.startDealer = +el.value; save(); return; }
+  if (el.id === 'rmode') { S.rules.roundsMode = el.value; render(); return; }
+  if (el.id === 'rcustom') { const v = parseInt(el.value, 10); S.rules.roundsCustom = isNaN(v) ? 1 : Math.max(1, Math.min(maxRounds(S.names.length), v)); render(); return; }
+  if (el.id && el.id.startsWith('r-')) {
+    const k = el.id.slice(2); S.rules[k] = el.checked;
+    if (k === 'noEven' && el.checked) S.rules.hidden = false;
+    if (k === 'hidden' && el.checked) S.rules.noEven = false;
+    render(); return;
+  }
+  if (el.dataset.cloud) {
+    const tgt = el.dataset.cloud === 'cur' ? S.cur : S.edit;
+    if (el.dataset.f === 'p') tgt.cloud = el.value === '' ? null : {p:+el.value, d:1};
+    else tgt.cloud.d = +el.value;
+    render();
+  }
+});
+app.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  const act = b.dataset.act, r = S.rounds.length + 1;
+  switch (act) {
+    case 'add': if (S.names.length < 6) S.names.push(''); break;
+    case 'rm': if (S.names.length > 3) { S.names.splice(+b.dataset.i, 1); if (S.startDealer >= S.names.length) S.startDealer = 0; } break;
+    case 'resetrules': S.rules = {...DEFAULT_RULES}; break;
+    case 'start':
+      S.players = S.names.map((x, i) => x.trim() || 'Spieler ' + (i + 1));
+      S.rounds = []; S.cur = newCur(); S.editIdx = null; S.screen = 'game'; confirmNew = false; wake(); break;
+    case 'inc': case 'dec': {
+      const k = b.dataset.kind, p = +b.dataset.p, delta = act === 'inc' ? 1 : -1;
+      const tgt = k === 'bids' ? S.cur.bids : k === 'tricks' ? S.cur.tricks : k === 'ebids' ? S.edit.bids : S.edit.tricks;
+      const max = k[0] === 'e' ? S.editIdx + 1 : r;
+      tgt[p] = Math.max(0, Math.min(max, tgt[p] + delta));
+      const owner = k[0] === 'e' ? S.edit : S.cur;
+      if (owner.cloud && owner.cloud.d === -1 && owner.bids[owner.cloud.p] === 0) owner.cloud.d = 1;
+      break; }
+    case 'trump': {
+      const tgt = S.editIdx !== null ? S.edit : S.cur;
+      tgt.trump = tgt.trump === b.dataset.v ? null : b.dataset.v; break; }
+    case 'tobids': S.cur.phase = 'tricks'; break;
+    case 'backbid': S.cur.phase = 'bid'; break;
+    case 'commit':
+      S.rounds.push({bids:[...S.cur.bids], tricks:[...S.cur.tricks], trump:S.cur.trump, cloud:S.cur.cloud});
+      S.cur = newCur(); break;
+    case 'undo': {
+      const last = S.rounds.pop();
+      S.cur = {phase:'tricks', bids:last.bids, tricks:last.tricks, trump:last.trump || null, cloud:last.cloud || null}; break; }
+    case 'edit': {
+      const i = +b.dataset.i, rd = S.rounds[i];
+      S.editIdx = i; S.edit = {bids:[...rd.bids], tricks:[...rd.tricks], trump:rd.trump || null, cloud:rd.cloud ? {...rd.cloud} : null}; break; }
+    case 'saveedit': S.rounds[S.editIdx] = S.edit; S.editIdx = null; S.edit = null; break;
+    case 'canceledit': S.editIdx = null; S.edit = null; break;
+    case 'newgame': confirmNew = true; break;
+    case 'newno': confirmNew = false; break;
+    case 'newyes': confirmNew = false; S.names = [...S.players]; S.screen = 'setup'; S.rounds = []; S.cur = null; break;
+    case 'rematch': S.rounds = []; S.startDealer = (S.startDealer + 1) % n(); S.cur = newCur(); break;
+    case 'tosetup': S.names = [...S.players]; S.screen = 'setup'; S.rounds = []; S.cur = null; break;
+    default: return;
+  }
+  if (act === 'edit' || act === 'commit' || act === 'saveedit') window.scrollTo({top:0, behavior:'smooth'});
+  render();
+});
+
+/* keep a game in progress across page updates */
+const hot = window.claude && window.claude.hot;
+if (hot && hot.snapshot) hot.snapshot(() => S);
+const boot = d => { const m = migrate(d); if (m) S = m; render(); };
+hot && hot.ready ? hot.ready(boot) : boot(hot && hot.data ? hot.data : {});
+})();
+</script>
+
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}</script>
+</body>
+</html>
